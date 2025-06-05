@@ -13,7 +13,7 @@ type User struct {
 	Active   bool   `json:"active"`
 }
 
-var users []User
+var users []*User
 var nextId int = 0
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -22,6 +22,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if username == "" {
 			c.JSON(400, gin.H{"error": "no username is provided"})
+			c.Abort()
 			return
 		}
 
@@ -32,7 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(403, gin.H{"error": " username  is not active"})
+		c.JSON(403, gin.H{"error": " username is not active"})
 		c.Abort()
 	}
 }
@@ -59,7 +60,7 @@ func main() {
 
 		user.ID = nextId
 		nextId++
-		users = append(users, user)
+		users = append(users, &user)
 		c.JSON(200, gin.H{"success": "user created"})
 
 		fmt.Println(users)
@@ -98,15 +99,24 @@ func main() {
 
 		if username == "" {
 			c.JSON(400, gin.H{"error": "no username is provided"})
+			c.Abort()
 			return
 		}
 
 		for _, v := range users {
-			if v.Username == username && v.Active {
-				v.Active = false
-				c.JSON(200, gin.H{"success": "user logged out"})
+			if v.Username == username {
+				if v.Active {
+					v.Active = false
+					c.JSON(200, gin.H{"success": "user logged out"})
+					return
+				} else {
+					c.JSON(400, gin.H{"success": "user is already logged out"})
+					return
+				}
 			}
 		}
+
+		c.JSON(404, gin.H{"error": "user not found"})
 
 	})
 
