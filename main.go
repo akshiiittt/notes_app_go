@@ -7,12 +7,13 @@ import (
 )
 
 type User struct {
-	ID       int
+	ID       int    `json:"id"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
 var users []User
+var nextId int = 0
 
 func main() {
 	r := gin.Default()
@@ -30,11 +31,13 @@ func main() {
 		for _, v := range users {
 			if v.Username == user.Username {
 				c.JSON(400, gin.H{"error": "user already exists"})
+				return
 			}
 		}
 
+		user.ID = nextId
+		nextId++
 		users = append(users, user)
-		user.ID++
 		c.JSON(200, gin.H{"success": "user created"})
 
 		fmt.Println(users)
@@ -48,13 +51,13 @@ func main() {
 		}
 
 		for _, v := range users {
-			if v.Username != user.Username {
-				c.JSON(400, gin.H{"error": "user doesnot exists"})
-			} else {
+			if v.Username == user.Username && v.Password == user.Password {
 				c.JSON(200, gin.H{"success": "you are logged in"})
+				return
 			}
 		}
 
+		c.JSON(400, gin.H{"error": "user doesnot exists"})
 	})
 
 	auth.GET("/users", func(c *gin.Context) {
