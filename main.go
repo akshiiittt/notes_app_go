@@ -10,10 +10,32 @@ type User struct {
 	ID       int    `json:"id"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+	Active   bool   `json:"active"`
 }
 
 var users []User
 var nextId int = 0
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.GetHeader("Username")
+
+		if username == "" {
+			c.JSON(400, gin.H{"error": "no username is provided"})
+			return
+		}
+
+		for _, v := range users {
+			if v.Username == username && v.Active {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(403, gin.H{"error": " username  is not active"})
+		c.Abort()
+	}
+}
 
 func main() {
 	r := gin.Default()
@@ -52,6 +74,7 @@ func main() {
 
 		for _, v := range users {
 			if v.Username == user.Username && v.Password == user.Password {
+				v.Active = true
 				c.JSON(200, gin.H{"success": "you are logged in"})
 				return
 			}
@@ -62,6 +85,29 @@ func main() {
 
 	auth.GET("/users", func(c *gin.Context) {
 		c.JSON(200, gin.H{"success": users})
+	})
+
+	protected := r.Group("/api/protected")
+
+	protected.GET("/notes", AuthMiddleware(), func(c *gin.Context) {
+		c.JSON(200, gin.H{"notes": []string{"note1", "note2"}})
+	})
+
+	r.POST("/logout", func(c *gin.Context) {
+		username := c.GetHeader("Username")
+
+		if username == "" {
+			c.JSON(400, gin.H{"error": "no username is provided"})
+			return
+		}
+
+		for _, v := range users {
+			if v.Username == username && v.Active {
+				v.Active = false
+				c.JSON(200, gin.H{"success": "user logged out"})
+			}
+		}
+
 	})
 
 	r.Run()
