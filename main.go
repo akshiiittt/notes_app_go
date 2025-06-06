@@ -115,6 +115,7 @@ func main() {
 					c.JSON(500, gin.H{"error": "could not generate token"})
 					return
 				}
+				v.Active = true
 				c.JSON(200, gin.H{"token": token})
 				return
 			}
